@@ -2,6 +2,7 @@ import tornado.ioloop
 import tornado.web
 import tornado.websocket
 import time
+import struct
 
 def start(ws):
     f = open("spreedmovie.hevc", "rb")
@@ -17,14 +18,16 @@ def start(ws):
 class VideoStreamWebSocket(tornado.websocket.WebSocketHandler):
     def open(self):
         print("WebSocket opened")
-        self.chunk_size = 0
-        self.fps = 0.0
+        self.chunk_size = 4096
+        self.fps = 30.0
+        tag = 'wsh264'
+        self.send_message(struct.pack('!6s2H', tag.encode('utf-8'), 320, 160))
 
     # @tornado.web.asynchronous
     def on_message(self, message):
         cmd = message.split()
         if len(cmd) > 0:
-            if cmd[0] == "start":
+            if cmd[0] == "v_002":
                 start(self)
             if cmd[0] == "chunk_size":
                 self.chunk_size = int(cmd[1])
@@ -34,6 +37,9 @@ class VideoStreamWebSocket(tornado.websocket.WebSocketHandler):
     # @tornado.web.asynchronous
     def send_message(self, data):
         self.write_message(data, binary=True)
+
+    def check_origin(self, origin):
+        return True
 
     def on_close(self):
         print("WebSocket closed")

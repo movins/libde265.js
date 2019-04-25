@@ -1008,12 +1008,34 @@ StreamPlayer.prototype._handle_onload = function(ws) {
         });
     };
 
-    ws.onmessage = decode;
+    var sequenceStarted = false;
+    ws.onmessage = (evt) => {
+        if (!sequenceStarted) {
+            const data = new Uint8Array(evt.data);
+            const tag = 'wsh264';
+            if(
+                data[0] === tag.charCodeAt(0) &&
+                data[1] === tag.charCodeAt(1) &&
+                data[2] === tag.charCodeAt(2) &&
+                data[3] === tag.charCodeAt(3) &&
+                data[4] === tag.charCodeAt(4) &&
+                data[5] === tag.charCodeAt(5)
+            ) {
+                var width = (data[6] * 256 + data[7]);
+                var height = (data[8] * 256 + data[9]);
+                sequenceStarted = true;
+                ws.send("v_002"); // 请求开始传输
+            }
+            return;
+        }
 
+        decode(evt);
+    };
+    
     // Start the transaction
     ws.send("chunk_size " + chunk_size);
     ws.send("fps " + fps);
-    ws.send("start");
+    // ws.send("v_002");
 };
 
 /** @expose */
